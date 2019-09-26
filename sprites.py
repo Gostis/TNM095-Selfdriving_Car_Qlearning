@@ -68,6 +68,9 @@ class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
+        self.startPosition = vec(x,y)
+        self.startRotation = 0
+
         self.game = game
         self.image = game.player_img
         self.rect = self.image.get_rect()
@@ -77,6 +80,7 @@ class Player(pg.sprite.Sprite):
         self.pos = vec(x, y)
         self.rot = 0
         self.rad = 0
+        self.hitSomething = False
 
     def get_keys(self):
         # decrement speed instead
@@ -96,29 +100,18 @@ class Player(pg.sprite.Sprite):
            # Backa?
             self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot +  ROTATE_SPRITE_DEG)
 
-    def collide_with_walls(self, dir):
+    def collide_with_walls(self):
+
         # puts the car on the edge. This will probably be removed
-        if dir == 'x':
-            hits = pg.sprite.spritecollide(
-                self, self.game.walls, False, collide_hit_rect)
-            if hits:
-                if self.vel.x > 0:
-                    self.pos.x = hits[0].rect.left - self.hit_rect.width / 2.0
-                if self.vel.x < 0:
-                    self.pos.x = hits[0].rect.right + self.hit_rect.width / 2.0
-                self.vel.x = 0
-                self.hit_rect.centerx = self.pos.x
-        if dir == 'y':
-            hits = pg.sprite.spritecollide(
-                self, self.game.walls, False, collide_hit_rect)
-            if hits:
-                if self.vel.y > 0:
-                    self.pos.y = hits[0].rect.top - self.hit_rect.height / 2.0
-                if self.vel.y < 0:
-                    self.pos.y = hits[0].rect.bottom + \
-                        self.hit_rect.height / 2.0
-                self.vel.y = 0
-                self.hit_rect.centery = self.pos.y
+        hits = pg.sprite.spritecollide(
+            self, self.game.walls, False, collide_hit_rect)
+        if hits:
+          self.hitSomething = True
+
+        goalHit = pg.sprite.spritecollide(self, self.game.goals, False, collide_hit_rect)
+        if goalHit:
+            print('GOAL!!!!')
+
 
     def update(self):
         self.get_keys()
@@ -126,18 +119,22 @@ class Player(pg.sprite.Sprite):
         # %360 only between 0 - 360
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
         self.rad = -( self.rot * math.pi / 180)
-        print(self.rad)
-
-        print(f"Rotation: {self.rot}")
         self.image = pg.transform.rotate(self.game.player_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
+
         # collision check
         self.hit_rect.centerx = self.pos.x
-        self.collide_with_walls('x')
         self.hit_rect.centery = self.pos.y
-        self.collide_with_walls('y')
+        self.collide_with_walls()
+
         self.rect.center = self.hit_rect.center
+        if(self.hitSomething):
+            self.hitSomething = False
+            self.pos = vec(self.startPosition.x,self.startPosition.y)
+            self.rot = self.startRotation
+
+
 
 
 """" NOT WORKING
@@ -172,7 +169,7 @@ class Wall(pg.sprite.Sprite):
 
 class Goal(pg.sprite.Sprite):
     def __init__(self, game, x, y):
-        self.groups = game.all_sprites, game.walls
+        self.groups = game.all_sprites, game.goals
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
         self.image = pg.Surface((TILESIZE, TILESIZE))
