@@ -92,9 +92,9 @@ class Player(pg.sprite.Sprite):
             # Trigonometri ~ woop woop
             self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot +
                                                    ROTATE_SPRITE_DEG)
-        # if keys[pg.K_DOWN] or keys[pg.K_s]:
+        if keys[pg.K_DOWN] or keys[pg.K_s]:
            # Backa?
-           # self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot +  ROTATE_SPRITE_DEG)
+            self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot +  ROTATE_SPRITE_DEG)
 
     def collide_with_walls(self, dir):
         # puts the car on the edge. This will probably be removed
@@ -125,8 +125,7 @@ class Player(pg.sprite.Sprite):
         self.pos += self.vel * self.game.dt
         # %360 only between 0 - 360
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
-        #self.rot = (self.rot + self.rot_speed * self.game.dt) % math.pi / 180
-        self.rad += ( self.rot * math.pi / 180 ) % math.pi * 2 
+        self.rad = -( self.rot * math.pi / 180)
         print(self.rad)
 
         print(f"Rotation: {self.rot}")

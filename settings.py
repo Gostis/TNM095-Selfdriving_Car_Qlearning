@@ -36,3 +36,6 @@ ROTATE_SPRITE_DEG = 90
 #    443 / SHRINK_FACTOR), math.floor(207 / SHRINK_FACTOR))
 PLAYER_HIT_RECT = pg.Rect(0, 0, math.floor(
     32), math.floor(32))
+
+# RAYCAST
+RAYCAST_LENGTH = 100
