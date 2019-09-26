@@ -23,12 +23,14 @@ class Game:
         game_folder = path.dirname(__file__)
         img_folder = path.join(game_folder, 'images')
         self.map = Map(path.join(game_folder, 'map.txt'))
+        # Other image
         # self.map = TiledMap(path.join(img_folder, 'MAP1_COLISIONS.tmx'))
         # self.map_img = self.map.make_map()
         # self.map_rect = self.map_img.get_rect()
 
         self.player_img = pg.image.load(
             path.join(img_folder, PLAYER_IMG)).convert_alpha()
+        # Other car
         # .player_img = pg.transform.rotate(pg.transform.scale(self.player_img, (math.floor(self.player_img.get_width() / SHRINK_FACTOR ),math.floor(self.player_img.get_height() / SHRINK_FACTOR))), 180-ROTATE_SPRITE_DEG)
        # self.player_img = pg.transform.rotate(pg.transform.scale(
        #     self.player_img, (self.player_img.get_width(), #self.player_img.get_height())), 0)
@@ -62,6 +64,8 @@ class Game:
     def run(self):
         # game loop - set self.playing = False to end the game
         self.playing = True
+        self.coll = False
+        self.i = 0
         while self.playing:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
@@ -75,6 +79,19 @@ class Game:
     def update(self):
         # update portion of the game loop
         self.all_sprites.update()
+
+        # Raycasts
+        self.rayCastSouth = RayCast((self.player.pos.x, self.player.pos.y), (
+            self.player.pos.x, self.player.pos.y - RAYCAST_LENGTH), self.player.rad, self.walls)
+
+        self.rayCastNorth = RayCast((self.player.pos.x, self.player.pos.y), (
+            self.player.pos.x, self.player.pos.y + RAYCAST_LENGTH), self.player.rad, self.walls)
+
+        self.rayCastEast = RayCast((self.player.pos.x, self.player.pos.y), (
+            self.player.pos.x + RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
+
+        self.rayCastWest = RayCast((self.player.pos.x, self.player.pos.y), (
+            self.player.pos.x - RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
@@ -90,33 +107,26 @@ class Game:
 
         self.all_sprites.draw(self.screen)
         # Raycasts
-        rayCastSouth = RayCast((self.player.pos.x, self.player.pos.y), (
-            self.player.pos.x, self.player.pos.y - RAYCAST_LENGTH), self.player.rad, self.walls)
-        pg.draw.line(self.screen, LIGHTGREEN,
-                     (self.player.pos.x, self.player.pos.y), rayCastSouth.target, 2)
-        pg.draw.circle(self.screen, TEAL, [
-            int(x) for x in rayCastSouth.collidePoint], 5)
 
-        rayCastNorth = RayCast((self.player.pos.x, self.player.pos.y), (
-            self.player.pos.x, self.player.pos.y + RAYCAST_LENGTH), self.player.rad, self.walls)
         pg.draw.line(self.screen, LIGHTGREEN,
-                     (self.player.pos.x, self.player.pos.y), rayCastNorth.target, 2)
+                     (self.player.pos.x, self.player.pos.y), self.rayCastSouth.target, 2)
         pg.draw.circle(self.screen, TEAL, [
-            int(x) for x in rayCastNorth.collidePoint], 5)
+            int(x) for x in self.rayCastSouth.collidePoint], 5)
 
-        rayCastEast = RayCast((self.player.pos.x, self.player.pos.y), (
-            self.player.pos.x + RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
         pg.draw.line(self.screen, LIGHTGREEN,
-                     (self.player.pos.x, self.player.pos.y), rayCastEast.target, 2)
+                     (self.player.pos.x, self.player.pos.y), self.rayCastNorth.target, 2)
         pg.draw.circle(self.screen, TEAL, [
-            int(x) for x in rayCastEast.collidePoint], 5)
+            int(x) for x in self.rayCastNorth.collidePoint], 5)
 
-        rayCastWest = RayCast((self.player.pos.x, self.player.pos.y), (
-            self.player.pos.x - RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
         pg.draw.line(self.screen, LIGHTGREEN,
-                     (self.player.pos.x, self.player.pos.y), rayCastWest.target, 2)
+                     (self.player.pos.x, self.player.pos.y), self.rayCastEast.target, 2)
         pg.draw.circle(self.screen, TEAL, [
-            int(x) for x in rayCastWest.collidePoint], 5)
+            int(x) for x in self.rayCastEast.collidePoint], 5)
+
+        pg.draw.line(self.screen, LIGHTGREEN,
+                     (self.player.pos.x, self.player.pos.y), self.rayCastWest.target, 2)
+        pg.draw.circle(self.screen, TEAL, [
+            int(x) for x in self.rayCastWest.collidePoint], 5)
 
         #####
         pg.draw.rect(self.screen, WHITE, self.player.hit_rect, 2)

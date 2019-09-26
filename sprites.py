@@ -4,71 +4,12 @@ from tilemap import *
 
 vec = pg.math.Vector2
 
-"""
-class CarSprite(pygame.sprite.Sprite):
-
-    MAX_FORWARD_SPEED = 0.2
-    MAX_REV_SPEED = 0.2
-    TURN_SPEED = 0.7
-
-    def __init__(self, game, x, y):
-        self.groups = game.all_sprites
-        pg.sprite.Sprite.__init__(self, self.groups)
-        self.game = game
-        self.image = game.player_img
-        self.position = vec(x, y)
-        # self.hit_rect = PLAYER_HIT_RECT
-        # self.hit_rect.center = self.rect.center
-        self.speed = self.direction = 0
-        self.k_left = self.k_right = self.k_down = self.k_up = 0
-
-    def get_keys(self, event):
-        keys = pg.key.get_pressed()
-
-        keyIsDown = event.type == KEYDOWN
-
-        if event.key == K_RIGHT:
-            self.k_right = -0.1
-        elif event.key == K_LEFT:
-            self.k_left = 0.1
-        elif keys[K_UP]:
-            self.k_up += 0.01
-        elif keys[K_DOWN]:
-            self.k_down += -0.01
-        elif keys[K_SPACE]:
-            self.speed = 0
-            self.k_up = 0
-            self.k_down = 0
-        elif keys[K_ESCAPE]:
-            self.exit(0)
-        elif keys[K_r]:
-            self.position = 500, 500
-
-    def update(self):
-        self.speed += (self.k_up + self.k_down)
-
-        if self.speed > self.MAX_FORWARD_SPEED:
-            self.speed = self.MAX_FORWARD_SPEED
-        if self.speed < -self.MAX_REV_SPEED:
-            self.speed = -self.MAX_REV_SPEED
-
-        self.direction += (self.k_right + self.k_left)
-        x, y = (self.position)
-        self.rad = self.direction * math.pi / 180
-        x += -self.speed * math.sin(self.rad)
-        y += -self.speed * math.cos(self.rad)
-        self.position = (x, y)
-        self.image = pygame.transform.rotate(self.src_image, self.direction)
-        self.rect = self.image.get_rect()
-        self.rect.center = self.position
-"""
-
 
 class Player(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites
         pg.sprite.Sprite.__init__(self, self.groups)
-        self.startPosition = vec(x,y)
+        self.startPosition = vec(x, y)
         self.startRotation = 0
 
         self.game = game
@@ -92,33 +33,34 @@ class Player(pg.sprite.Sprite):
             self.rot_speed = PLAYER_ROT_SPEED
         if keys[pg.K_RIGHT] or keys[pg.K_d]:
             self.rot_speed = -PLAYER_ROT_SPEED
-        if keys[pg.K_UP] or keys[pg.K_w]:
+        if ~keys[pg.K_UP] or keys[pg.K_w]:
             # Trigonometri ~ woop woop
             self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot +
                                                    ROTATE_SPRITE_DEG)
         if keys[pg.K_DOWN] or keys[pg.K_s]:
            # Backa?
-            self.vel = vec(-PLAYER_SPEED / 2, 0).rotate(-self.rot +  ROTATE_SPRITE_DEG)
+            self.vel = vec(-PLAYER_SPEED / 2,
+                           0).rotate(-self.rot + ROTATE_SPRITE_DEG)
 
     def collide_with_walls(self):
 
         # puts the car on the edge. This will probably be removed
-        hits = pg.sprite.spritecollide(
+        self.hits = pg.sprite.spritecollide(
             self, self.game.walls, False, collide_hit_rect)
-        if hits:
-          self.hitSomething = True
+        if self.hits:
+            self.hitSomething = True
 
-        goalHit = pg.sprite.spritecollide(self, self.game.goals, False, collide_hit_rect)
+        goalHit = pg.sprite.spritecollide(
+            self, self.game.goals, False, collide_hit_rect)
         if goalHit:
             print('GOAL!!!!')
-
 
     def update(self):
         self.get_keys()
         self.pos += self.vel * self.game.dt
         # %360 only between 0 - 360
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
-        self.rad = -( self.rot * math.pi / 180)
+        self.rad = -(self.rot * math.pi / 180)
         self.image = pg.transform.rotate(self.game.player_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
@@ -127,14 +69,13 @@ class Player(pg.sprite.Sprite):
         self.hit_rect.centerx = self.pos.x
         self.hit_rect.centery = self.pos.y
         self.collide_with_walls()
+        print(f"Pos: {self.pos.x}, {self.pos.y}")
 
         self.rect.center = self.hit_rect.center
         if(self.hitSomething):
             self.hitSomething = False
-            self.pos = vec(self.startPosition.x,self.startPosition.y)
+            self.pos = vec(self.startPosition.x, self.startPosition.y)
             self.rot = self.startRotation
-
-
 
 
 """" NOT WORKING
