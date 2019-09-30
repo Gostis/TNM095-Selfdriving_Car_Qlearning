@@ -1,7 +1,7 @@
 import pygame as pg
 from settings import *
 from tilemap import *
-
+import math
 vec = pg.math.Vector2
 
 
@@ -69,7 +69,7 @@ class Player(pg.sprite.Sprite):
         self.hit_rect.centerx = self.pos.x
         self.hit_rect.centery = self.pos.y
         self.collide_with_walls()
-        print(f"Pos: {self.pos.x}, {self.pos.y}")
+        #print(f"Pos: {self.pos.x}, {self.pos.y}")
 
         self.rect.center = self.hit_rect.center
         if(self.hitSomething):
@@ -127,8 +127,11 @@ class RayCast():
         self.currentPos = vec(origin)
         self.target = self.rotate(origin, point, angle)
         self.heading = vec(self.target) - vec(origin)
-        self.collidePoint = self.collisions(
+        self.pointAndDistance = self.collisions(
             self.heading, self.currentPos, obstacles)
+        self.collidePoint = self.pointAndDistance[0]
+        self.distanceToObstacle = self.pointAndDistance[1]
+
 
     def rotate(self, origin, point, angle):
         """
@@ -149,5 +152,14 @@ class RayCast():
             currentPos += direction
             for sprite in obstacles:
                 if sprite.rect.collidepoint(currentPos):
-                    return currentPos
-        return currentPos
+                    return currentPos , self.distance(self.target, self.currentPos)
+        return currentPos, 0
+
+    def distance(self, collisionPoint, currentPos):
+                # Calculates the eucliean distance from the center of the car to the targeted position, i.e distance
+                # is wrong by TILESIZE / 2. Subtracting could be redundant
+        return RAYCAST_LENGTH - math.sqrt((collisionPoint[0] - currentPos.x) ** 2 + (collisionPoint[1] - currentPos.y) ** 2)
+
+
+
+

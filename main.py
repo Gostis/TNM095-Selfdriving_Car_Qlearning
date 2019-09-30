@@ -93,6 +93,10 @@ class Game:
         self.rayCastWest = RayCast((self.player.pos.x, self.player.pos.y), (
             self.player.pos.x - RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
 
+        print(f'South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, '
+              f'East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}')
+
+
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
             pg.draw.line(self.screen, LIGHTGREY, (x, 0), (x, HEIGHT))
