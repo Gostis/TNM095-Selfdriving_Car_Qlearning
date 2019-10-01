@@ -23,6 +23,18 @@ class Player(pg.sprite.Sprite):
         self.rad = 0
         self.hitSomething = False
 
+    def __sub__(self, other):
+        return (self.pos.x - other.x, self.pos.y - other.y)
+
+    def action(self, choice):
+        if choice == 0:
+            #self.move(x=1, y=0)
+            self.rot_speed = PLAYER_ROT_SPEED
+        elif choice == 1:
+            #self.move(x=-1, y=0)
+            self.rot_speed = -PLAYER_ROT_SPEED
+
+
     def get_keys(self):
         # decrement speed instead
         self.vel = vec(0, 0)
@@ -107,7 +119,6 @@ class Wall(pg.sprite.Sprite):
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
 
-
 class Goal(pg.sprite.Sprite):
     def __init__(self, game, x, y):
         self.groups = game.all_sprites, game.goals
@@ -120,6 +131,10 @@ class Goal(pg.sprite.Sprite):
         self.y = y
         self.rect.x = x * TILESIZE
         self.rect.y = y * TILESIZE
+
+    def __sub__(self, other):
+        return (self.x - other.x, self.y - other.y)
+
 
 
 class RayCast():

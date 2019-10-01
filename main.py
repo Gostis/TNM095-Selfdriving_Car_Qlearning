@@ -5,6 +5,8 @@ from settings import *
 from sprites import *
 from tilemap import *
 import math
+import numpy as np
+import pickle
 
 
 class Game:
@@ -13,7 +15,7 @@ class Game:
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
-
+        self.rayCastsDistances = (0 for i in range(NUMBER_OF_RAYCASTS))
         # repeating wont be needed.
         pg.key.set_repeat(500, 100)
 
@@ -60,12 +62,85 @@ class Game:
                 Obstacle(self,tile_object.x *TILESIZE ,tile_object.y * TILESIZE,
                          tile_object.width * TILESIZE,tile_object.height * TILESIZE)
         '''
+    def qLearning(self):
+
+        start_q_table = None  # or filename
+        epsilon = 0.9
+
+        if start_q_table is None:
+            q_table = {}
+            for x in range(0, WIDTH, TILESIZE):
+                for y in range(0, HEIGHT, TILESIZE):
+                    q_table[(x,y)] = [np.random.uniform(-5, 0) for i in range(NUMBER_OF_ACTIONS)]
+        else:
+            with open(start_q_table, 'rb') as f:
+                q_table = pickle.load(f)
+
+        episode_rewards = []
+        for episode in range(HM_EPISODES):
+            # Could be problem
+            player = self.player
+            food = Goal()
+            enemy = Wall()
+
+            if episode % SHOW_EVERY == 0:
+                print(f"on # {episode}, epsilon: {epsilon}")
+                print(f"{SHOW_EVERY} ep mean {np.mean(episode_rewards[-SHOW_EVERY:])}")
+                show = True
+            else:
+                show = False
+
+            episode_reward = 0
+
+            for i in range(200):
+                obs = (player - food, player-self.closestRaycast().collidePoint)
+                if np.random.random() > epsilon:
+                    action = np.argmax(q_table[obs])
+                else:
+                    action = np.random.randint(0, NUMBER_OF_ACTIONS)
+
+                player.action(action)
+
+                # maybe later
+                # food.move()
+                # enemy.move()
+                ##############
+
+                if player.x == enemy.x and player.y == enemy.y:
+                    reward = -DEATH_PENALTY
+                elif player.x == food.x and player.y == food.y:
+                    reward = FOOD_REWARD
+                else:
+                    reward = -MOVE_PENALTY
+
+                new_obs = (player - food, player - enemy)
+                max_future_q = np.max(q_table[new_obs])
+                current_q = q_table[obs][action]
+
+                if reward == FOOD_REWARD:
+                    new_q = FOOD_REWARD
+                elif reward == -DEATH_PENALTY:
+                    new_q = -DEATH_PENALTY
+                else:
+                    new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * \
+                            (reward + DISCOUNT * max_future_q)
+
+                q_table[obs][action] = new_q
+
+    def closestRaycast(self):
+        highestValue = 0
+        for i in range(NUMBER_OF_RAYCASTS):
+            if(self.closestRaycast(i).distanceToObstacle > highestValue):
+                highestValue = self.closestRaycast(i)
+        return highestValue
 
     def run(self):
         # game loop - set self.playing = False to end the game
         self.playing = True
         self.coll = False
         self.i = 0
+        self.qLearning()
+
         while self.playing:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
@@ -93,8 +168,11 @@ class Game:
         self.rayCastWest = RayCast((self.player.pos.x, self.player.pos.y), (
             self.player.pos.x - RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
 
-        print(f'South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, '
-              f'East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}')
+        self.rayCastsDistances = ( self.rayCastSouth, self.rayCastEast,
+                                   self.rayCastNorth, self.rayCastWest)
+
+        print(f"South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, "
+              f"East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}")
 
 
     def draw_grid(self):
