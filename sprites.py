@@ -24,7 +24,7 @@ class Player(pg.sprite.Sprite):
         self.hitSomething = False
 
     def __sub__(self, other):
-        return (self.pos.x - other.x, self.pos.y - other.y)
+        return int(math.sqrt((self.pos.x - other.x) ** 2 + (self.pos.y- other.y) ** 2))
 
     def action(self, choice):
         if choice == 0:
@@ -69,7 +69,9 @@ class Player(pg.sprite.Sprite):
 
     def update(self):
         self.get_keys()
-        self.pos += self.vel * self.game.dt
+        print(f"Pos 1: {self.pos.x}, {self.pos.y}")
+        self.pos += self.vel #* self.game.dt
+        print(f"Pos 2: {self.pos.x}, {self.pos.y}")
         # %360 only between 0 - 360
         self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
         self.rad = -(self.rot * math.pi / 180)
@@ -81,7 +83,7 @@ class Player(pg.sprite.Sprite):
         self.hit_rect.centerx = self.pos.x
         self.hit_rect.centery = self.pos.y
         self.collide_with_walls()
-        #print(f"Pos: {self.pos.x}, {self.pos.y}")
+
 
         self.rect.center = self.hit_rect.center
         if(self.hitSomething):

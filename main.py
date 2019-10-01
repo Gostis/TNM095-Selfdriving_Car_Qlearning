@@ -15,16 +15,17 @@ class Game:
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
         pg.display.set_caption(TITLE)
         self.clock = pg.time.Clock()
-        self.rayCastsDistances = (0 for i in range(NUMBER_OF_RAYCASTS))
+        self.rayCastGroup = [0 for i in range(NUMBER_OF_RAYCASTS)]
         # repeating wont be needed.
         pg.key.set_repeat(500, 100)
-
+        self.goal = (0, 0)
         self.load_data()
+        #pythoself.q_table = self.defineQtable()
 
     def load_data(self):
         game_folder = path.dirname(__file__)
         img_folder = path.join(game_folder, 'images')
-        self.map = Map(path.join(game_folder, 'map.txt'))
+        self.map = Map(path.join(game_folder, 'map3.txt'))
         # Other image
         # self.map = TiledMap(path.join(img_folder, 'MAP1_COLISIONS.tmx'))
         # self.map_img = self.map.make_map()
@@ -49,9 +50,9 @@ class Game:
                 if tile == 'x':
                     Wall(self, col, row)
                 if tile == 'P':
-                    self.player = Player(self, 100, 200)
+                    self.player = Player(self, col * TILESIZE, row * TILESIZE)
                 if tile == 'G':
-                    Goal(self, col, row)
+                    self.goal = Goal(self, col, row)
 
         '''
         for tile_object in self.map.tmxdata.objects:
@@ -62,42 +63,51 @@ class Game:
                 Obstacle(self,tile_object.x *TILESIZE ,tile_object.y * TILESIZE,
                          tile_object.width * TILESIZE,tile_object.height * TILESIZE)
         '''
-    def qLearning(self):
-
+    def defineQtable(self):
         start_q_table = None  # or filename
-        epsilon = 0.9
-
         if start_q_table is None:
             q_table = {}
-            for x in range(0, WIDTH, TILESIZE):
-                for y in range(0, HEIGHT, TILESIZE):
-                    q_table[(x,y)] = [np.random.uniform(-5, 0) for i in range(NUMBER_OF_ACTIONS)]
+
+            for goal in range(0, int(GRIDWIDTH)):
+                for wall in range(0, int(GRIDHEIGHT)):
+                            q_table[goal, wall] = [np.random.uniform(-5, 0) for i in range(2)]
         else:
             with open(start_q_table, 'rb') as f:
                 q_table = pickle.load(f)
 
+        return q_table
+
+    def qLearning(self):
+
+        epsilon = 0.9
+
         episode_rewards = []
         for episode in range(HM_EPISODES):
-            # Could be problem
+            # Could be problem, shallow copy.
             player = self.player
-            food = Goal()
-            enemy = Wall()
-
+            food = self.goal
+            ''''
             if episode % SHOW_EVERY == 0:
                 print(f"on # {episode}, epsilon: {epsilon}")
                 print(f"{SHOW_EVERY} ep mean {np.mean(episode_rewards[-SHOW_EVERY:])}")
                 show = True
             else:
                 show = False
+            '''
 
             episode_reward = 0
+            epsilon = 0.7
 
-            for i in range(200):
-                obs = (player - food, player-self.closestRaycast().collidePoint)
+            for i in range(1):
+                #print(f'hello : {player - self.closestRaycast()}')
+                obs = (self.player-food, self.player-self.closestRaycast())
+
                 if np.random.random() > epsilon:
-                    action = np.argmax(q_table[obs])
+                    action = np.argmax(self.q_table[obs])
                 else:
                     action = np.random.randint(0, NUMBER_OF_ACTIONS)
+
+
 
                 player.action(action)
 
@@ -105,7 +115,7 @@ class Game:
                 # food.move()
                 # enemy.move()
                 ##############
-
+                """"
                 if player.x == enemy.x and player.y == enemy.y:
                     reward = -DEATH_PENALTY
                 elif player.x == food.x and player.y == food.y:
@@ -126,25 +136,33 @@ class Game:
                             (reward + DISCOUNT * max_future_q)
 
                 q_table[obs][action] = new_q
+            """
 
     def closestRaycast(self):
+        rayCast = 0
         highestValue = 0
         for i in range(NUMBER_OF_RAYCASTS):
-            if(self.closestRaycast(i).distanceToObstacle > highestValue):
-                highestValue = self.closestRaycast(i)
-        return highestValue
+            if(self.rayCastGroup[i].distanceToObstacle > highestValue):
+                highestValue = self.rayCastGroup[i].distanceToObstacle
+                rayCast = self.rayCastGroup[i].collidePoint
+
+        if highestValue != 0:
+            return rayCast
+        else:
+            return vec(0, 0)
 
     def run(self):
         # game loop - set self.playing = False to end the game
         self.playing = True
         self.coll = False
         self.i = 0
-        self.qLearning()
+
 
         while self.playing:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
             self.update()
+            #self.qLearning()
             self.draw()
 
     def quit(self):
@@ -153,7 +171,9 @@ class Game:
 
     def update(self):
         # update portion of the game loop
+
         self.all_sprites.update()
+
 
         # Raycasts
         self.rayCastSouth = RayCast((self.player.pos.x, self.player.pos.y), (
@@ -168,8 +188,9 @@ class Game:
         self.rayCastWest = RayCast((self.player.pos.x, self.player.pos.y), (
             self.player.pos.x - RAYCAST_LENGTH, self.player.pos.y), self.player.rad, self.walls)
 
-        self.rayCastsDistances = ( self.rayCastSouth, self.rayCastEast,
-                                   self.rayCastNorth, self.rayCastWest)
+        self.rayCastGroup = [self.rayCastSouth, self.rayCastEast,
+                                   self.rayCastNorth, self.rayCastWest]
+
 
         print(f"South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, "
               f"East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}")

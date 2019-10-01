@@ -12,8 +12,8 @@ RED = (255, 0, 0)
 YELLOW = (255, 255, 0)
 
 # game settings
-WIDTH = 1280  # 16 * 64 or 32 * 32 or 64 * 16
-HEIGHT = 660  # 16 * 48 or 32 * 24 or 64 * 12
+WIDTH = 256 + 64 #1280  # 16 * 64 or 32 * 32 or 64 * 16
+HEIGHT = 256 + 64 - 16 #720  # 16 * 48 or 32 * 24 or 64 * 12
 
 
 FPS = 60
@@ -29,7 +29,7 @@ GRIDHEIGHT = HEIGHT / TILESIZE
 
 
 # Player settings
-PLAYER_SPEED = 300
+PLAYER_SPEED = 1
 PLAYER_IMG = 'tank_1.png'
 SHRINK_FACTOR = 8
 PLAYER_ROT_SPEED = 250
@@ -45,7 +45,7 @@ NUMBER_OF_RAYCASTS = 4
 
 
 # Machine Learning
-HM_EPISODES = 200000
+HM_EPISODES = 1
 MOVE_PENALTY = 1
 DEATH_PENALTY = 300
 FOOD_REWARD = 25
