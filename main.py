@@ -102,16 +102,14 @@ class Game:
             episode_reward = 0
             epsilon = 0.7
 
-            for i in range(1):
+            for i in range(200):
                 #print(f'hello : {player - self.closestRaycast()}')
                 obs = (self.player-food, self.player-self.closestRaycast())
-                
+
                 if np.random.random() > epsilon:
                     action = np.argmax(self.q_table[obs])
                 else:
                     action = np.random.randint(0, NUMBER_OF_ACTIONS)
-
-
 
                 player.action(action)
 
@@ -119,17 +117,17 @@ class Game:
                 # food.move()
                 # enemy.move()
                 ##############
-                """"
-                if player.x == enemy.x and player.y == enemy.y:
+
+                if player.hitWall:
                     reward = -DEATH_PENALTY
-                elif player.x == food.x and player.y == food.y:
+                elif player.hitGoal:
                     reward = FOOD_REWARD
                 else:
                     reward = -MOVE_PENALTY
 
-                new_obs = (player - food, player - enemy)
-                max_future_q = np.max(q_table[new_obs])
-                current_q = q_table[obs][action]
+                new_obs = (self.player-food, self.player-self.closestRaycast())
+                max_future_q = np.max(self.q_table[new_obs])
+                current_q = self.q_table[obs][action]
 
                 if reward == FOOD_REWARD:
                     new_q = FOOD_REWARD
@@ -139,8 +137,8 @@ class Game:
                     new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * \
                             (reward + DISCOUNT * max_future_q)
 
-                q_table[obs][action] = new_q
-            """
+                self.q_table[obs][action] = new_q
+
 
     def closestRaycast(self):
         rayCast = 0
@@ -166,7 +164,7 @@ class Game:
             self.dt = self.clock.tick(FPS) / 1000
             self.events()
             self.update()
-            #self.qLearning()
+            self.qLearning()
             self.draw()
 
     def quit(self):
