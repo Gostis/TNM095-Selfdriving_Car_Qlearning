@@ -20,7 +20,7 @@ class Game:
         pg.key.set_repeat(500, 100)
         self.goal = (0, 0)
         self.load_data()
-        #pythoself.q_table = self.defineQtable()
+        self.q_table = self.defineQtable()
 
     def load_data(self):
         game_folder = path.dirname(__file__)
@@ -68,12 +68,16 @@ class Game:
         if start_q_table is None:
             q_table = {}
 
-            for goal in range(0, int(GRIDWIDTH)):
-                for wall in range(0, int(GRIDHEIGHT)):
-                            q_table[goal, wall] = [np.random.uniform(-5, 0) for i in range(2)]
+            for x1 in range(-int(GRIDWIDTH)+1, int(GRIDWIDTH)):
+                for y1 in range(-int(GRIDHEIGHT)+1, int(GRIDHEIGHT)):
+                    for x2 in range(-int(GRIDWIDTH) + 1, int(GRIDWIDTH)):
+                        for y2 in range(-int(GRIDHEIGHT) + 1, int(GRIDHEIGHT)):
+                            q_table[(x1,y1),(x2,y2)] = [np.random.uniform(-5, 0) for i in range(2)]
         else:
             with open(start_q_table, 'rb') as f:
                 q_table = pickle.load(f)
+
+        print(q_table[(0,0),(0,0)])
 
         return q_table
 
@@ -101,7 +105,7 @@ class Game:
             for i in range(1):
                 #print(f'hello : {player - self.closestRaycast()}')
                 obs = (self.player-food, self.player-self.closestRaycast())
-
+                
                 if np.random.random() > epsilon:
                     action = np.argmax(self.q_table[obs])
                 else:
@@ -192,8 +196,8 @@ class Game:
                                    self.rayCastNorth, self.rayCastWest]
 
 
-        print(f"South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, "
-              f"East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}")
+        #print(f"South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, "
+        #      f"East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}")
 
 
     def draw_grid(self):
