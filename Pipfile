@@ -13,6 +13,8 @@ numpy = "*"
 pygame = "*"
 math = "*"
 pytmx = "*"
+pickle = "*"
+pil = "*"
 
 [requires]
 python_version = "3.7"

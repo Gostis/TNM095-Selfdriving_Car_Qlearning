@@ -8,7 +8,6 @@ import math
 import numpy as np
 import pickle
 import time
-import matplotlib.pyplot as plt
 
 class Game:
     def __init__(self):
@@ -22,15 +21,12 @@ class Game:
         self.goal = (0, 0)
         self.load_data()
         self.q_table = self.defineQtable()
-        self.wallPositions = ([[0 for x in range(GRIDWIDTH+1)] for y in range(GRIDHEIGHT+1)])
         self.numberOfEpisodes = 0
-        self.episode_rewards = []
-        self.aggr_ep_rewards = {'ep': [], 'avg': [], 'min': [], 'max': []}
 
     def load_data(self):
         game_folder = path.dirname(__file__)
         img_folder = path.join(game_folder, 'images')
-        self.map = Map(path.join(game_folder, 'map5.txt'))
+        self.map = Map(path.join(game_folder, 'map3.txt'))
         # Other image
         # self.map = TiledMap(path.join(img_folder, 'MAP1_COLISIONS.tmx'))
         # self.map_img = self.map.make_map()
@@ -54,12 +50,11 @@ class Game:
             for col, tile in enumerate(tiles):
                 if tile == 'x':
                     Wall(self, col, row)
-                    self.wallPositions[col][row] = 1
                 if tile == 'P':
                     self.player = Player(self, col * TILESIZE, row * TILESIZE)
                 if tile == 'G':
                     self.goal = Goal(self, col, row)
-                    self.wallPositions[col][row] = 2
+
         '''
         for tile_object in self.map.tmxdata.objects:
             if tile_object.name == 'Player':
@@ -70,93 +65,93 @@ class Game:
                          tile_object.width * TILESIZE,tile_object.height * TILESIZE)
         '''
     def defineQtable(self):
-        start_q_table = 'qtable_FINAL_1570805657.pickle' #"qtable_FINAL_1570803598.pickle" #'qtable_1570784179.pickle'  # or filename
+        start_q_table = None  # or filename
         if start_q_table is None:
             q_table = {}
 
-            for x in range(0, int(GRIDWIDTH)+1):
-                for y in range(0, int(GRIDHEIGHT)+1):
-                        q_table[(x,y)] = [np.random.uniform(-5, 0) for i in range(NUMBER_OF_ACTIONS)]
+            for x in range(0, int(GRIDWIDTH)):
+                for y in range(0, int(GRIDHEIGHT)):
+                        q_table[(x,y)] = [np.random.uniform(-5, 0) for i in range(2)]
         else:
             with open(start_q_table, 'rb') as f:
                 q_table = pickle.load(f)
+
+        #print(q_table[(0,0),(0,0)])
 
         return q_table
 
     def qLearning(self):
 
-        self.player.resetPosition()
-        player = self.player
-        food = self.goal
+        epsilon = 0.9
 
-        episode_reward = 0
-        epsilon = 0
+        episode_rewards = []
+        for episode in range(HM_EPISODES):
+            if episode % SHOW_EVERY == 0:
+                print(f"on # {episode}, epsilon: {epsilon}")
+                print(f"{SHOW_EVERY} ep mean {np.mean(episode_rewards[-SHOW_EVERY:])}")
+                print(f"Last position on the grid: {self.player.posToTile}")
+                # show = True
 
-        self.update()
-        self.dt = 0.5
+            self.numberOfEpisodes = episode
+            self.player.resetPosition()
 
-        for i in range(ITERATIONS):
-        #while True:
-            #obs = (self.player-food, self.player-self.closestRaycast())
-            obs = (int(player.posToTile.x), int(player.posToTile.y))
-            if np.random.random() > epsilon:
-                action = np.argmax(self.q_table[obs])
-            else:
+            # Could be problem, shallow copy.
+            player = self.player
+            food = self.goal
+
+
+
+            episode_reward = 0
+            epsilon = 0.7
+
+            for i in range(200):
+                #print(f'hello : {player - self.closestRaycast()}')
+                #obs = (self.player-food, self.player-self.closestRaycast())
+
+                #if np.random.random() > epsilon:
+                #    action = np.argmax(self.q_table[obs])
                 action = np.random.randint(0, NUMBER_OF_ACTIONS)
 
-            player.action(action)
-            self.update()
+                player.action(action)
 
-            if not LEARNING:
-                self.draw()
-            if(self.wallPositions[int(player.posToTile.x)][int(player.posToTile.y)] == 1):
-                player.hitWall = True
-            elif(self.wallPositions[int(player.posToTile.x)][int(player.posToTile.y)] == 2):
-                player.hitGoal = True
+                if player.hitWall:
+                    reward = -DEATH_PENALTY
+                    print("Hit Wall")
+                elif player.hitGoal:
+                    reward = FOOD_REWARD
+                    print("Hit Goal")
+                else:
+                    reward = -MOVE_PENALTY
 
-            #if(player.toMuchRotation == True):
-                #player.hitWall = True
+                #new_obs = (self.player-food, self.player-self.closestRaycast())
+                max_future_q = np.max(self.q_table[(self.player.posToTile.x,self.player.posToTile.y)])
+                current_q = self.q_table[(self.player.posToTile.x,self.player.posToTile.y)][action]
+                #print(current_q)
+                #print(max_future_q)
 
-            if player.hitWall:
-                reward = -DEATH_PENALTY
-            elif player.hitGoal:
-                reward = FOOD_REWARD
-                print("Hit Goal")
-            else:
-                reward = -MOVE_PENALTY #+ self.distanceTo((player.pos), food)
+                if reward == FOOD_REWARD:
+                    new_q = FOOD_REWARD
+                    print("I WON!!!")
+                elif reward == -DEATH_PENALTY:
+                    new_q = -DEATH_PENALTY
+                else:
+                    new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
 
-            new_obs = (player.posToTile.x, player.posToTile.y)
+                self.q_table[(self.player.posToTile.x,self.player.posToTile.y)][(action)] = new_q
 
-            max_future_q = np.max(self.q_table[new_obs])
-            current_q = self.q_table[new_obs][action]
+                episode_reward += reward
 
-            if reward == FOOD_REWARD:
-                new_q = FOOD_REWARD
-            elif reward == -DEATH_PENALTY:
-                new_q = -DEATH_PENALTY
-            else:
-                new_q = (1 - LEARNING_RATE) * current_q + LEARNING_RATE * (reward + DISCOUNT * max_future_q)
+                if reward == FOOD_REWARD or reward == -DEATH_PENALTY:
+                    break
 
-            self.q_table[(self.player.posToTile.x,self.player.posToTile.y)][(action)] = new_q
+            episode_rewards.append(episode_reward)
+            epsilon *= EPS_DECAY
 
-            episode_reward += reward
-
-            if reward == FOOD_REWARD or reward == -DEATH_PENALTY:
-                player.resetPosition()
-                break
-
-        self.episode_rewards.append(episode_reward)
-        #epsilon *= EPS_DECAY
+        #with open(f"qtable_{int(time.time())}.pickle", "wb") as f:
+        #    pickle.dump(self.q_table, f)
 
 
-    def distanceTo(self, pointOne, pointTwo):
-        dist = math.sqrt(
-            (pointOne.x - pointTwo.x) ** 2 + (pointOne.x - pointTwo.y) ** 2)
-        #(dist)
-        if(dist > 200):
-            return 0
-        else:
-            return 1
+
 
     def closestRaycast(self):
         rayCast = 0
@@ -177,46 +172,15 @@ class Game:
         self.coll = False
         self.i = 0
 
-        self.player.resetPosition()
 
-        for episode in range(HM_EPISODES):
-            #print("episode", episode)
+        while self.playing:
+            self.dt = self.clock.tick(FPS) / 1000
             self.events()
+            self.update()
             self.qLearning()
-
-            if LEARNING:
-                if not episode % SHOW_EVERY:
-                    average_reward = sum(self.episode_rewards[-SHOW_EVERY:]) / len(self.episode_rewards[-SHOW_EVERY:])
-                    self.aggr_ep_rewards['ep'].append(episode)
-                    self.aggr_ep_rewards['avg'].append(average_reward)
-                    self.aggr_ep_rewards['min'].append(
-                        min(self.episode_rewards[-SHOW_EVERY:]))
-                    self.aggr_ep_rewards['max'].append(
-                        max(self.episode_rewards[-SHOW_EVERY:]))
-                    print(
-                        f"Episode: {episode} avg: {average_reward} min: {min(self.episode_rewards[-SHOW_EVERY:])} max:{max(self.episode_rewards[-SHOW_EVERY:])}")
-                #if not episode % SHOW_EVERY * 10:
-                #    with open(f"qtable_{episode}_{int(time.time())}.pickle", "wb") as f:
-                #        pickle.dump(self.q_table, f)
-
-
-
-
+            self.draw()
 
     def quit(self):
-        if LEARNING:
-            with open(f"qtable_FINAL_{int(time.time())}.pickle", "wb") as f:
-                pickle.dump(self.q_table, f)
-
-            plt.plot(self.aggr_ep_rewards['ep'],
-                     self.aggr_ep_rewards['avg'], label="avg")
-            plt.plot(self.aggr_ep_rewards['ep'],
-                     self.aggr_ep_rewards['min'], label="min")
-            plt.plot(self.aggr_ep_rewards['ep'],
-                     self.aggr_ep_rewards['max'], label="max")
-            plt.legend(loc=4)
-            plt.show()
-
         pg.quit()
         sys.exit()
 
@@ -227,7 +191,7 @@ class Game:
 
 
         # Raycasts
-        '''
+        #''''
         self.rayCastSouth = RayCast((self.player.pos.x, self.player.pos.y), (
             self.player.pos.x, self.player.pos.y - RAYCAST_LENGTH), self.player.rad, self.walls)
 
@@ -243,10 +207,10 @@ class Game:
         self.rayCastGroup = [self.rayCastSouth, self.rayCastEast,
                                    self.rayCastNorth, self.rayCastWest]
 
-        '''
+
         #print(f"South: {self.rayCastSouth.distanceToObstacle}, North: {self.rayCastNorth.distanceToObstacle}, "
         #      f"East: {self.rayCastEast.distanceToObstacle} and West: {self.rayCastWest.distanceToObstacle}")
-
+        #'''
 
     def draw_grid(self):
         for x in range(0, WIDTH, TILESIZE):
@@ -261,9 +225,8 @@ class Game:
         self.draw_grid()
 
         self.all_sprites.draw(self.screen)
-
         # Raycasts
-        """"
+
         pg.draw.line(self.screen, LIGHTGREEN,
                      (self.player.pos.x, self.player.pos.y), self.rayCastSouth.target, 2)
         pg.draw.circle(self.screen, TEAL, [
@@ -283,7 +246,7 @@ class Game:
                      (self.player.pos.x, self.player.pos.y), self.rayCastWest.target, 2)
         pg.draw.circle(self.screen, TEAL, [
             int(x) for x in self.rayCastWest.collidePoint], 5)
-        """
+
         #####
         pg.draw.rect(self.screen, WHITE, self.player.hit_rect, 2)
         pg.display.flip()
@@ -304,10 +267,7 @@ class Game:
 # create the game object
 g = Game()
 g.show_start_screen()
-jacobsVariabel = True
-while jacobsVariabel:
+while True:
     g.new()
     g.run()
     g.show_go_screen()
-    jacobsVariabel = False
-g.quit()

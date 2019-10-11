@@ -1,7 +1,6 @@
 import pygame as pg
 from settings import *
 from tilemap import *
-import math
 vec = pg.math.Vector2
 
 
@@ -24,6 +23,10 @@ class Player(pg.sprite.Sprite):
         self.rot_speed = 0
         self.hitWall = False
         self.hitGoal = False
+        self.hitReward = False
+        self.toMuchRotation = False
+        self.posToTile = vec(x // TILESIZE, y // TILESIZE)
+
 
     def __sub__(self, other):
         return ((self.pos.x - other.x ) // TILESIZE, (self.pos.y - other.y)// TILESIZE)
@@ -33,9 +36,54 @@ class Player(pg.sprite.Sprite):
         if choice == 0:
             #self.move(x=1, y=0)
             self.rot_speed = PLAYER_ROT_SPEED
+            self.rot = (self.rot + self.rot_speed * self.game.dt)
         elif choice == 1:
             #self.move(x=-1, y=0)
             self.rot_speed = -PLAYER_ROT_SPEED
+            self.rot = (self.rot + self.rot_speed * self.game.dt)
+        elif choice == 2:
+            self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot + ROTATE_SPRITE_DEG)
+            #pass
+
+        if(self.rot > 360 * 10):
+            #self.resetPosition()
+            self.toMuchRotation = True
+        elif(self.rot < -360 * 10):
+            #self.resetPosition()
+            self.toMuchRotation = True
+
+        self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot + ROTATE_SPRITE_DEG)
+
+        self.pos += self.vel * self.game.dt
+        self.getPosToTileSize()
+        #self.collide_with_walls()
+
+
+    def getPosToTileSize(self):
+        if(self.pos.x // TILESIZE > GRIDWIDTH):
+            self.posToTile.x = GRIDWIDTH - 1
+            #self.pos.x = GRIDWIDTH - 1
+
+        if(self.pos.y // TILESIZE > GRIDHEIGHT):
+            self.posToTile.y = GRIDHEIGHT - 1
+            #self.pos.y = GRIDHEIGHT - 1
+
+        if(self.pos.x // TILESIZE < GRIDWIDTH or self.pos.y // TILESIZE < GRIDHEIGHT):
+            self.posToTile.x = abs(self.pos.x // TILESIZE)
+            self.posToTile.y = abs(self.pos.y // TILESIZE)
+
+    def resetPosition(self):
+        self.pos = vec(self.startPosition.x, self.startPosition.y)
+        self.rot = self.startRotation
+
+        if (self.hitWall):
+            self.hitWall = False
+
+        if (self.hitGoal):
+            self.hitGoal = False
+
+        if(self.hitReward):
+            self.hitReward = False
 
 
     def get_keys(self):
@@ -44,18 +92,17 @@ class Player(pg.sprite.Sprite):
         #self.rot_speed = 0
         keys = pg.key.get_pressed()
 
-        #if keys[pg.K_LEFT] or keys[pg.K_a]:
-        #    self.rot_speed = PLAYER_ROT_SPEED
-        #if keys[pg.K_RIGHT] or keys[pg.K_d]:
-        #    self.rot_speed = -PLAYER_ROT_SPEED
-        if ~keys[pg.K_UP] or keys[pg.K_w]:
+        if keys[pg.K_LEFT] or keys[pg.K_a]:
+            self.rot_speed = PLAYER_ROT_SPEED
+            self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
+        if keys[pg.K_RIGHT] or keys[pg.K_d]:
+            self.rot_speed = -PLAYER_ROT_SPEED
+            self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
+        if keys[pg.K_UP] or keys[pg.K_w]:
             # Trigonometri ~ woop woop
+
             self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot +
                                                    ROTATE_SPRITE_DEG)
-        #if keys[pg.K_DOWN] or keys[pg.K_s]:
-        #   # Backa?
-        #    self.vel = vec(-PLAYER_SPEED / 2,
-        #                   0).rotate(-self.rot + ROTATE_SPRITE_DEG)
 
     def collide_with_walls(self):
 
@@ -68,37 +115,36 @@ class Player(pg.sprite.Sprite):
             self, self.game.goals, False, collide_hit_rect)
         if goalHit:
             self.hitGoal = True
-            print('GOAL!!!!')
-
+        """
+        rewardHit = pg.sprite.spritecollide(
+            self, self.game.reward, True, collide_hit_rect)
+        if rewardHit:
+            self.hitReward = True
+        """
     def update(self):
-        self.get_keys()
+        #self.get_keys()
+        #self.vel = vec(PLAYER_SPEED, 0).rotate(-self.rot + ROTATE_SPRITE_DEG)
         #print(f"Pos 1: {self.pos.x}, {self.pos.y}")
-        self.pos += self.vel #* self.game.dt
+        #self.pos += self.vel #* self.game.dt
         #print(f"Pos 2: {self.pos.x}, {self.pos.y}")
         # %360 only between 0 - 360
-        self.rot = (self.rot + self.rot_speed * self.game.dt) % 360
+
         self.rad = -(self.rot * math.pi / 180)
         self.image = pg.transform.rotate(self.game.player_img, self.rot)
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
 
+
         # collision check
         self.hit_rect.centerx = self.pos.x
         self.hit_rect.centery = self.pos.y
-        self.collide_with_walls()
+        #self.collide_with_walls()
 
 
         self.rect.center = self.hit_rect.center
 
-        if(self.hitWall):
-            self.hitWall = False
-            self.pos = vec(self.startPosition.x, self.startPosition.y)
-            self.rot = self.startRotation
 
-        if(self.hitGoal):
-            self.hitGoal = False
-            self.pos = vec(self.startPosition.x, self.startPosition.y)
-            self.rot = self.startRotation
+
 
 """" NOT WORKING
 class Obstacle(pg.sprite.Sprite):
@@ -145,6 +191,22 @@ class Goal(pg.sprite.Sprite):
     def __sub__(self, other):
         return (self.x - other.x, self.y - other.y)
 
+class RewardGate(pg.sprite.Sprite):
+    def __init__(self, game, x, y):
+        self.groups = game.all_sprites, game.reward
+        pg.sprite.Sprite.__init__(self, self.groups)
+
+        self.game = game
+        self.image = pg.Surface((TILESIZE, TILESIZE))
+        self.image.fill(GREEN)
+        self.rect = self.image.get_rect()
+        self.x = x
+        self.y = y
+        self.rect.x = x * TILESIZE
+        self.rect.y = y * TILESIZE
+
+    def __sub__(self, other):
+        return (self.x - other.x, self.y - other.y)
 
 
 class RayCast():
@@ -184,6 +246,9 @@ class RayCast():
                 # Calculates the eucliean distance from the center of the car to the targeted position, i.e distance
                 # is wrong by TILESIZE / 2. Subtracting could be redundant
         return RAYCAST_LENGTH - math.sqrt((collisionPoint[0] - currentPos.x) ** 2 + (collisionPoint[1] - currentPos.y) ** 2)
+
+
+
 
 
 
